@@ -31,8 +31,8 @@ def caluclate_position(currents_map, bearing, position):
     boat_y_velocity = PROPULSION * np.sin(bearing)
 
     # Calculate new position of module
-    new_position = [n + (v_array[n] + boat_y_velocity) * timestep,
-                    m + (u_array[m] + boat_x_velocity) * timestep]
+    new_position = [n + (v_array[n] + boat_y_velocity) * TIMESTEP,
+                    m + (u_array[m] + boat_x_velocity) * TIMESTEP]
 
     # Round values of position tuple to fix to a grid vertex
     new_position = np.rint(new_position)
