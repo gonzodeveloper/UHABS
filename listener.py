@@ -2,7 +2,7 @@ import socket
 import sys
 from threading import Thread
 
-def listen(host, port:)
+def listen(host, port)
 
     # Make socket
     sock = socket.socket()
