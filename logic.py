@@ -2,11 +2,11 @@ from .nav_sim import transform_map, next_bearing
 from .gps_sim import calculate_positions
 from .comms import send, recv
 from .driver import set_bearing
+from .telemetry_sim import telem_sim
 
 import numpy as np
 NEW_BEARING = '0'
 NEW_MAP = '1'
-telemetry = '5'
 
 
 def control(conn, bearing, pos, dest, map):
@@ -41,6 +41,9 @@ def control(conn, bearing, pos, dest, map):
         # Recalculate position and bearing based off updated current map and bearing
         pos = calculate_positions(map, bearing, pos)
         bearing = next_bearing(graph, pos, dest)
+
+        # Grab telemetry
+        telemetry = telem_sim()
 
         # Send current bearing, position, and telemetry to ground station
         send(bearing, pos, telemetry)
