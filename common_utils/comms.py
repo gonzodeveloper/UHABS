@@ -78,5 +78,3 @@ def recv(conn):
         data = np.load(buffer)['data']
 
     return flag, data
-
-
