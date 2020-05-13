@@ -1,10 +1,6 @@
-from .nav_sim import transform_map, next_bearing
-from .gps_sim import calculate_positions
-from .comms import send, recv
-from .driver import set_bearing
-from .telemetry_sim import telem_sim
+from .module_control_unit import nav, telemetry, comms, driver
 
-import numpy as np
+
 NEW_BEARING = '0'
 NEW_MAP = '1'
 

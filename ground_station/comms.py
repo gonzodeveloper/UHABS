@@ -1,15 +1,22 @@
 import numpy as np
-import socket
 import io
 
+flags = {
+            'MANUAL_BEARING':  b'0',
+            'FULL_MAP':        b'1',
+            'CONV_MAP':        b'2',
+            'TEMEM_POS':       b'3',
+            'TELEM_TEMP':      b'4',
+            'TELEM_PATH':      b'5'
+         }
 
-def send(sock, flag, data):
+def send(conn, flag, data):
     with io.BytesIO() as buffer:
 
         buffer.write(flag)
         np.savez_compressed(buffer, data=data)
 
-        sock.send(buffer)
+        conn.send(buffer)
 
 
 def recv(conn, BUFFER_SIZE=1024):

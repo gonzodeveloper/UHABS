@@ -3,23 +3,7 @@ import numpy as np
 import struct
 
 
-def encode_node_id(position):
-    """
-    Packs node position into byte string for id
-    :param position: y, x position on current map; tuple
-    :return: node id; byte array
-    """
-    y, x = position
-    return struct.pack('II', y, x)
 
-
-def decode_node_id(raw):
-    """
-    Unpacks node id from byte string to position y, x
-    :param raw: node id; byte array
-    :return: y, x position on current map; tuple
-    """
-    return struct.unpack("II", raw)
 
 
 def transform_map(currents_map):
@@ -43,7 +27,7 @@ def transform_map(currents_map):
             vu = currents_map[y, x]
 
             # Get neighbors, with weights and bearings, of (y, x)
-            ns = get_neighbors(y, x, vu, dims=(y_dim, x_dim))
+            ns = _get_neighbors(y, x, vu, dims=(y_dim, x_dim))
 
             # Add to di-graph
             currents_graph.add_edges_from(ns)
@@ -51,7 +35,29 @@ def transform_map(currents_map):
     return currents_graph
 
 
-def get_neighbors(ys, xs, vu_src, dims):
+def next_bearing(currents_graph, boat_loc, dest_loc):
+    """
+    Use a dijkstras algorithm to find shortest path between the boats position and its destination.
+    :param currents_graph: graph representation of 2D currents map; networkx.DiGraph
+    :param boat_loc: y, x position of the boat; tuple
+    :param dest_loc: y, x position of the destination; tuple
+    :return: bearing that should be taken; int
+             the entire calculated path to the destination; list encoded node_ids
+    """
+
+    src_node = _encode_node_id(boat_loc)
+    dest_node = _encode_node_id(dest_loc)
+
+    shortest_path = nx.dijkstra_path(currents_graph, src_node, dest_node)
+
+    next_node = shortest_path[1]
+
+    next_bearing = currents_graph.edges[(src_node, next_node)]['bearing']
+
+    return next_bearing, shortest_path
+
+
+def _get_neighbors(ys, xs, vu_src, dims):
     """
     Get all actual legal neighbors for position (ys, xs).
     Calculate cost of edge to these neighbors based on their bearing, distance,
@@ -64,13 +70,13 @@ def get_neighbors(ys, xs, vu_src, dims):
              readable by networkx.add_edges_from [(src_id, dest_id, {'weight': w, 'bearing': theta}, ...]
     """
     # Get node_id for src
-    src = encode_node_id((ys, xs))
+    src = _encode_node_id((ys, xs))
 
     # Positions of potential neighbors
     coords_adj = [(ys + 0, xs + 1), (ys + 1, xs + 1),
-                   (ys + 1, xs + 0), (ys + 1, xs - 1),
-                   (ys + 0, xs - 1), (ys - 1, xs - 1),
-                   (ys - 1, xs + 0), (ys - 1, xs + 1)]
+                  (ys + 1, xs + 0), (ys + 1, xs - 1),
+                  (ys + 0, xs - 1), (ys - 1, xs - 1),
+                  (ys - 1, xs + 0), (ys - 1, xs + 1)]
 
     # Bearings and initial weights of potential neighbors
     theta_adj = np.array([0, 45, 90, 135, 180, 225, 270, 315])
@@ -95,7 +101,7 @@ def get_neighbors(ys, xs, vu_src, dims):
         if (0 <= yd < y_dim) and (0 <= xd < x_dim):
 
             # If so, get nod_id as dest
-            dest = encode_node_id((yd, xd))
+            dest = _encode_node_id((yd, xd))
             # Get new weight for this edge by subtracting uv-current weight from source
             w = np.sum(vu - vu_src)**2
 
@@ -105,25 +111,24 @@ def get_neighbors(ys, xs, vu_src, dims):
     return neighbors
 
 
-def next_bearing(currents_graph, boat_loc, dest_loc):
+def _encode_node_id(position):
     """
-    Use a dijkstras algorithm to find shortest path between the boats position and its destination.
-    :param currents_graph: graph representation of 2D currents map; networkx.DiGraph
-    :param boat_loc: y, x position of the boat; tuple
-    :param dest_loc: y, x position of the destination; tuple
-    :return: bearing that should be taken; int
-             the entire calculated path to the destination; list encoded node_ids
+    Packs node position into byte string for id
+    :param position: y, x position on current map; tuple
+    :return: node id; byte array
     """
+    y, x = position
+    return struct.pack('II', y, x)
 
-    src_node = encode_node_id(boat_loc)
-    dest_node = encode_node_id(dest_loc)
 
-    shortest_path = nx.dijkstra_path(currents_graph, src_node, dest_node)
+def _decode_node_id(raw):
+    """
+    Unpacks node id from byte string to position y, x
+    :param raw: node id; byte array
+    :return: y, x position on current map; tuple
+    """
+    return struct.unpack("II", raw)
 
-    next_node = shortest_path[1]
 
-    next_bearing = currents_graph.edges[(src_node, next_node)]['bearing']
-
-    return next_bearing, shortest_path
 
 

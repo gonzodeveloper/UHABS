@@ -1,16 +1,18 @@
 import numpy as np
 
-# Fixed propulsion of the craft 10 m/s
-PROPULSION = 10
 
-# Spatial resolution of the currents map 100 m
-GRID_RESOLUTION = 100
+def get_temp(mu=65, sigma=5):
+    """
+    Grabs telemetry for the controller to send to ground station.
+    :return:
+    """
+    # Generate a random temperature
+    temperature = np.random.normal(mu, sigma)
 
-# Ten second timesteps
-TIMESTEP = 10
+    return temperature
 
 
-def caluclate_position(currents_map, bearing, position):
+def get_position(currents_map, bearing, position, propulsion, timestep):
     # Code here
     """
     Calculates position based off currents map, bearing, and propulsion of the module
@@ -27,15 +29,14 @@ def caluclate_position(currents_map, bearing, position):
     u_array = currents_map[::, ::, 1]
 
     # Calculate velocity components of module
-    boat_x_velocity = PROPULSION * np.cos(bearing)
-    boat_y_velocity = PROPULSION * np.sin(bearing)
+    boat_x_velocity = propulsion * np.cos(bearing)
+    boat_y_velocity = propulsion * np.sin(bearing)
 
     # Calculate new position of module
-    new_position = [n + (v_array[n] + boat_y_velocity) * TIMESTEP,
-                    m + (u_array[m] + boat_x_velocity) * TIMESTEP]
+    new_position = [n + (v_array[n] + boat_y_velocity) * timestep,
+                    m + (u_array[m] + boat_x_velocity) * timestep]
 
     # Round values of position tuple to fix to a grid vertex
     new_position = np.rint(new_position)
 
     return new_position
-
