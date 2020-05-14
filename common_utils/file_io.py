@@ -12,5 +12,6 @@ def read_netcdf(filename):
         u = sar_wind * np.cos(input_dir)
         v = sar_wind * np.sin(input_dir)
 
-        return lats, lons, u, v
+
+        return np.dstack((lats, lons)), np.dstack((u, v))
 
