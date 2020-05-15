@@ -16,7 +16,7 @@ def main(config):
     latlons, currents = read_netcdf(config['init_map'])
 
     # Initialize command modules
-    nav = ModuleNavigation(config['init_pos'], config['init_dest'], config['nav_timestep'], latlons, currents)
+    nav = ModuleNavigation(config['nav_timestep'], latlons, currents)
     telem = ModuleTelemetry()
     drivers = ModuleDrivers()
 
@@ -34,11 +34,18 @@ def main(config):
 
 
     # Start autonomous navigation
-    Thread(target=auto_pilot, args=(nav, drivers, path_transmitter, telem)).start()
+    Thread(target=auto_pilot, args=(config['init_pos'],
+                                    config['dest'],
+                                    nav,
+                                    telem,
+                                    drivers,
+                                    path_transmitter,
+                                    gps_transmitter,
+                                    config['nav_timestep'],
+                                    config['sim_speedup_factor'])).start()
 
     # Send telemetry and gps
     Thread(target=telemetry_reports, args=(telem, telem_transmitter, config['telem_freq'])).start()
-    Thread(target=location_reports, args=(telem, gps_transmitter, config['telem_freq'])).start()
 
     # Listen for new maps and instructions
     Thread(target=recieve_manual_directions, args=(drivers, instr_az_comms)).start()
@@ -46,38 +53,51 @@ def main(config):
     Thread(target=recieve_new_maps, args=(nav, new_map_listener)).start()
 
 
-def auto_pilot(nav, telem, drivers, comms, timestep):
-    while nav.pos != nav.dest:
-        az, path = nav.get_next_azimuth()
+def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, timestep, sim_speedup_factor=1):
+    pos = init_pos
 
+    while pos != dest:
+
+        # Calculate the shortest path given our position and destination
+        az, path = nav.get_next_azimuth(pos, dest)
+
+        # Set the bearing of the craft
         drivers.set_azimuth(az)
-        comms.send(path)
-        nav.pos = telem.get_position()
 
-        time.sleep(timestep)
+        # Get the ocean current at our position
+        current = nav.get_current(pos)
+        # Get module's propulsion
+        prop = drivers.get_propulsion()
+
+        # Next position is determined by our position, speed, dir, ocean currrent, and time elapsed
+        pos = telem.get_position(pos, current, az, prop, timestep)
+
+        # Transmit data
+        gps_trans.send(pos)
+        path_trans.send(path)
 
 
-def telemetry_reports(telem, comms, freq):
+        time.sleep(timestep / sim_speedup_factor)
+
+
+def telemetry_reports(telem, comms, freq, sim_speedup_factor):
     while True:
         data = telem.get_temp()
         comms.send(data)
-        time.sleep(freq)
+        time.sleep(freq / sim_speedup_factor)
 
-def location_reports(telem, comms, freq):
-    while True:
-        data = telem.get_position()
-        comms.send(data)
-        time.sleep(freq)
 
 def recieve_manual_directions(drivers, comms):
     while True:
         az, duration = comms.recv()
         drivers.set_azimuth(az, force_duration=duration)
 
+
 def recieve_manual_propulsion(drivers, comms):
     while True:
         speed, duration = comms.recv()
         drivers.set_propulsion(speed, force_duration=duration)
+
 
 def recieve_new_maps(nav, comms):
     while True:

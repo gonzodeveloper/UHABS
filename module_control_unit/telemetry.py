@@ -15,7 +15,7 @@ class ModuleTelemetry:
         return temperature
 
     @staticmethod
-    def get_position(pos, latlons, currents, azimuth, propulsion, time_elaspsed):
+    def get_position(geo_pos, current, azimuth, propulsion, time_elaspsed):
         # Code here
         """
         Calculates position based off currents map, bearing, and propulsion of the module
@@ -24,18 +24,15 @@ class ModuleTelemetry:
         :param bearing: angle defined from East for module heading; float
         :return: (y, x) new position of module; tuple
         """
-        # Grab module position in grid
-        y, x = pos
-
-        lat_start, lon_start = latlons[y, x]
+        lat_start, lon_start = geo_pos
 
         # Calculate velocity components of module
         boat_u = propulsion * np.cos(np.radians(azimuth))
         boat_v = propulsion * np.sin(np.radians(azimuth))
 
         # Corrected u-v components
-        currents_u, currents_v = currents[y, x]
-        u, v = (boat_u + currents_u), (boat_v + currents_v)
+        current_u, current_v = current
+        u, v = (boat_u + current_u), (boat_v + current_v)
 
         # Corrected speed, azimuth
         corrected_speed = np.sqrt(u**2 + v**2)

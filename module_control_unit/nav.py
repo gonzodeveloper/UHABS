@@ -3,19 +3,20 @@ import networkx as nx
 import numpy as np
 import pyproj
 import struct
-
+import scipy
 
 class ModuleNavigation:
 
 
-    def __init__(self, init_pos, init_dest, nav_timestep, latlons, currents):
-        self.pos = init_pos
-        self.dest = init_dest
+    def __init__(self, nav_timestep, latlons, currents):
+
 
         self.latlons = latlons
         self.currents = currents
         self.timestep = nav_timestep
         self.nav_graph = self._transform_map()
+
+        self.kdtree = self._build_tree()
 
         self.map_lock = RLock()
 
@@ -25,7 +26,7 @@ class ModuleNavigation:
             self.currents = currents
             self.nav_graph = self._transform_map()
 
-    def get_next_azimuth(self):
+    def get_next_azimuth(self, geo_pos, geo_dest):
         """
         Use a dijkstras algorithm to find shortest path between the boats position and its destination.
         :param currents_graph: graph representation of 2D currents map; networkx.DiGraph
@@ -35,16 +36,36 @@ class ModuleNavigation:
                  the entire calculated path to the destination; list encoded node_ids
         """
 
-        src_node = ModuleNavigation._encode_node_id(self.pos)
-        dest_node = ModuleNavigation._encode_node_id(self.dest)
+        idx_pos = self._geo_idx(geo_pos)
+        idx_dest = self._geo_idx(geo_dest)
+
+        src_node = ModuleNavigation._encode_node_id(idx_pos)
+        dest_node = ModuleNavigation._encode_node_id(idx_dest)
 
         shortest_path = nx.dijkstra_path(self.nav_graph, src_node, dest_node)
 
         next_node = shortest_path[1]
 
-        next = self.nav_graph.edges[(src_node, next_node)]['azimuth']
+        next_az = self.nav_graph.edges[(src_node, next_node)]['azimuth']
 
-        return next, np.array(shortest_path)
+        path_ids = np.array([self._decode_node_id(ids) for ids in shortest_path])
+
+        return next_az, path_ids
+    def get_current(self, geo_pos):
+
+        y, x = self._geo_idx(geo_pos)
+        return self.currents[y, x]
+
+    def _geo_idx(self, geo_pos):
+
+        lat, lon = geo_pos
+        result = self.kdtree.query((lat, lon))
+        return np.unravel_index(result[1], (self.latlons.shape[0], self.latlons.shape[1]))
+
+    def _build_tree(self):
+        model_grid = list(zip(np.ravel(self.latlons[::, ::, 0]), np.ravel(self.latlons[::,::,1])))
+
+        return scipy.spatial.KDTree(model_grid)
 
     def _transform_map(self):
         """
@@ -89,8 +110,8 @@ class ModuleNavigation:
         # Get node_id for src
         src = ModuleNavigation._encode_node_id((ys, xs))
 
+        # Geocoords for src
         lat_src, lon_src = self.latlons[ys, xs]
-        uv_src = self.currents[ys, xs]  * self.timestep
 
         # Positions of potential neighbors
         neighbors = [(ys + 0, xs + 1), (ys + 1, xs + 1),
@@ -100,6 +121,7 @@ class ModuleNavigation:
 
         # Get the lat-lon coords of the VALID adjacent positions
         valid_neighbors = [(yd, xd) for (yd, xd) in neighbors if (0 <= yd < y_dim) and (0 <= xd < x_dim)]
+
         coords_adj = [self.latlons[yd, xd] for (yd, xd) in valid_neighbors]
         lats_adj, lons_adj = coords_adj[::,0], coords_adj[::,1]
 
@@ -119,10 +141,14 @@ class ModuleNavigation:
         u_adj = velocity * np.cos(np.radians(theta_adj))
         v_adj = velocity * np.sin(np.radians(theta_adj))
 
-        uv_adj = np.dstack((u_adj, v_adj))
+        # Current at source
+        current_u, current_v = self.currents[ys, xs]
 
-        # For each adjacent   w = (us - ud)^2 + (vs - vd)^2
-        w_adj = np.sum((uv_adj - uv_src)**2)
+        # Find the most favorable edge by subtracting current from adjacent vectors
+        u, v = (u_adj - current_u), (v_adj - current_v)
+
+        # Weight scaling
+        w_adj = np.sqrt(u**2 + v**2)
 
         # Get list of esdination node_ids
         dest_ids = [ModuleNavigation._encode_node_id((yd, xd)) for yd, xd in valid_neighbors]
@@ -131,13 +157,13 @@ class ModuleNavigation:
         return edges
 
     @staticmethod
-    def _encode_node_id(position):
+    def _encode_node_id(idx_pos):
         """
         Packs node position into byte string for id
         :param position: y, x position on current map; tuple
         :return: node id; byte array
         """
-        y, x = position
+        y, x = idx_pos
         return struct.pack('II', y, x)
 
     @staticmethod
