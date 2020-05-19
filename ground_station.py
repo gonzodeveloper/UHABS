@@ -39,11 +39,11 @@ def main(config):
 	new_map_transmitter = Transmistter(ground_station, port_list['maps'])
 
 	# Receive telemetry and GPS
-	Thread(target=controls, args=comms).start()
+	Thread(target=controls, args=(comms,)).start()
 
-	Thread(target=telem_list, args=telem_listener).start()
-	Thread(target=path_list, args=path_listener).start()
-	Thread(target=gps_list, args=gps_listener).start()
+	Thread(target=telem_list, args=(telem_listener,)).start()
+	Thread(target=path_list, args=(path_listener,)).start()
+	Thread(target=gps_list, args=(gps_listener,)).start()
 
 	# Send new maps and instructions
 
