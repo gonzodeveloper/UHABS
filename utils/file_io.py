@@ -3,11 +3,7 @@ import numpy as np
 
 
 def read_netcdf(filename):
-    """
 
-    :param filename: grabs filename to read; string
-    :return: two 2-D numpy arrays containing u and v vector component information for current maps; 2-D numpy array
-    """
     with Dataset(filename) as nc:
 
         # Grab lat, long

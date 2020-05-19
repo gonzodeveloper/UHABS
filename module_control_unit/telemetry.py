@@ -14,7 +14,7 @@ class ModuleTelemetry:
     @staticmethod
     def get_position(geo_pos, current, azimuth, propulsion, time_elaspsed):
         """
-
+        Get the geodesic position of the boat after a given timestep
         :param geo_pos: lat, long position of boat, tuple
         :param current: two 2-D numpy arrays of u, v values;
         :param azimuth: boat direction; float

@@ -30,43 +30,58 @@ class ModuleNavigation:
     def get_next_azimuth(self, geo_pos, geo_dest):
         """
         Use a dijkstras algorithm to find shortest path between the boats position and its destination.
-        :param currents_graph: graph representation of 2D currents map; networkx.DiGraph
-        :param boat_loc: y, x position of the boat; tuple
-        :param dest_loc: y, x position of the destination; tuple
+        :param geo_pos: lat-lon position of the boat; tuple
+        :param geo_dest: lat-lon position of the destination; tuple
         :return: azimuth that should be taken; int
                  the entire calculated path to the destination; list encoded node_ids
         """
 
+        # Determine geo positions' corresponding locations on our lattice
         idx_pos = self._geo_idx(geo_pos)
         idx_dest = self._geo_idx(geo_dest)
 
+        # Get the corresopnding nodes
         src_node = ModuleNavigation._encode_node_id(idx_pos)
         dest_node = ModuleNavigation._encode_node_id(idx_dest)
 
+        # Calculate path
         shortest_path = nx.dijkstra_path(self.nav_graph, src_node, dest_node)
 
         next_node = shortest_path[1]
 
+        # Azimuth is an attribute of each edge, get the next one we should take
         next_az = self.nav_graph.edges[(src_node, next_node)]['azimuth']
 
+        # Get lat-lon coords of each lattice position we will visit in this route
         path_ids = np.array([self._decode_node_id(ids) for ids in shortest_path])
-
         path_coords = np.array([self.latlons[y, x] for (y, x) in path_ids])
 
         return next_az, path_coords
 
     def get_current(self, geo_pos):
-
+        """
+        Get the u,v current at the given coordinates
+        :param geo_pos: lat-lon; tuple
+        :return: u,v current; tuple
+        """
         y, x = self._geo_idx(geo_pos)
         return self.currents[y, x]
 
     def _geo_idx(self, geo_pos):
-
+        """
+        Find the grid position on our lattice of a given lat-lon position
+        :param geo_pos: lat-lon; tuple
+        :return: y, x grid position
+        """
         lat, lon = geo_pos
         result = self.kdtree.query((lat, lon))
         return np.unravel_index(result[1], (self.latlons.shape[0], self.latlons.shape[1]))
 
     def _build_tree(self):
+        """
+        Build a KD-Tree for reverse lookup of grid-positions from lat-lon coords; see _geo_idx()
+        :return: scypi.spatial.KD-Tree
+        """
         model_grid = list(zip(np.ravel(self.latlons[::, ::, 0]), np.ravel(self.latlons[::,::,1])))
 
         return scipy.spatial.KDTree(model_grid)
@@ -74,7 +89,6 @@ class ModuleNavigation:
     def _transform_map(self):
         """
         Transforms the u, v component current map into a directed graph
-        :param currents_map: u(y, x), v(y, x) 2D component arrays for current values; np.dstack
         :return: directed graph representation of map; networkx.DiGraph
         """
         # Create empty directed graph
@@ -187,14 +201,14 @@ class ModuleNavigation:
 
     @staticmethod
     def print_progress_bar (iteration, total, length=50, fill='█'):
-        '''
+        """
         Auxillary function. Gives us a progress bar which tracks the completion status of our task. Put in loop.
         :param iteration: current iteration
         :param total: total number of iterations
         :param length: length of bar
         :param fill: fill of bar
         :return:
-        '''
+        """
         prefix = "Transforming Map: "
         filled_length = int(length * iteration // total)
         bar = fill * filled_length + '-' * (length - filled_length)

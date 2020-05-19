@@ -16,26 +16,20 @@ temp = None
 path = None
 pos = None
 dest = None
-
 latlons = None
 currents = None
 
+# Create logger
 logger = logging.getLogger('gs_logger')
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler('./logs/gs.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+logger.setLevel(logging.INFO)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def main(config):
-    """
-
-    :param config:
-    :return:
-    """
-    global logger
-    logger.setLevel(logging.INFO)
-    handler = logging.FileHandler('./logs/gs.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-    logger.setLevel(logging.INFO)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
     global dest, latlons, currents
 
@@ -62,13 +56,7 @@ def main(config):
 
 
 def controls(ground_station, port_list):
-    """
 
-    :param az_comms: holds azimuth inputs; float
-    :param prop_comms: holds propulsion inputs; float
-    :param map_comms: holds lat, longs, and current maps; tuple of numpy float32 arrays
-    :return:
-    """
     global latlons, currents, logger
 
     print("Waiting for connection...")
@@ -79,10 +67,12 @@ def controls(ground_station, port_list):
     map_comms = Comms(ground_station, port_list['maps'], listener=True)
     logger.info("Current map transmitter connected.")
 
+    # Wait for all of our comms to connect to boat before entering command loop
     while az_comms.conn is None and prop_comms.conn is None and map_comms.conn is None:
         pass
 
     print("Connected! ")
+
     # Initialize
     quit = False
     while not quit:
@@ -134,8 +124,8 @@ def controls(ground_station, port_list):
 def telem_list(ground_station, port_list):
     global temp, logger
 
+    # Establish connection
     telem_listener = Comms(ground_station, port_list['telem'], listener=True)
-
     while telem_listener.conn is None:
         pass
 
@@ -148,8 +138,8 @@ def telem_list(ground_station, port_list):
 def path_list(ground_station, port_list):
     global path, logger
 
+    # Establish connection
     path_listener = Comms(ground_station, port_list['nav_path'], listener=True)
-
     while path_listener.conn is None:
         pass
 
@@ -162,6 +152,7 @@ def path_list(ground_station, port_list):
 def gps_list(ground_station, port_list):
     global pos, logger
 
+    # Establish connection
     gps_listener = Comms(ground_station, port_list['gps'], listener=True)
     while gps_listener.conn is None:
         pass
@@ -177,8 +168,11 @@ def visualize():
 
     idx = 0
     while True:
+        # Wait until we have recieved telemetry and path data from the boat
         if path is None or pos is None:
             continue
+
+        # Plot most recent navigation
         plot_navigation(pos, dest, path, latlons, currents, temp, plot_idx=idx)
         idx += 1
         time.sleep(10)

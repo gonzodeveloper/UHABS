@@ -11,18 +11,17 @@ import time
 import warnings
 import logging
 
+# Set logger
 logger = logging.getLogger('boat_logger')
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler('./logs/boat.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+logger.setLevel(logging.INFO)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def main(config):
-
-    global logger
-    logger.setLevel(logging.INFO)
-    handler = logging.FileHandler('./logs/boat.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-    logger.setLevel(logging.INFO)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
     # Read the initial currents from file
     latlons, currents = read_netcdf(config['init_map'])
@@ -71,19 +70,7 @@ def main(config):
 
 
 def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, timestep, sim_speedup_factor=1):
-    """
 
-    :param init_pos: initial position of boat; tuple
-    :param dest: destination position of boat; tuple
-    :param nav:
-    :param telem: placeholder for telemetry (temperature); float
-    :param drivers: contains azimuth and speed information; tuple
-    :param path_trans: sends path; array of tuples
-    :param gps_trans: sends gps; tuple
-    :param timestep: time between iterations; int
-    :param sim_speedup_factor: factor by which simulation is sped up; int
-    :return:
-    """
     global logger
     pos = init_pos
 
@@ -120,7 +107,10 @@ def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, times
 def telemetry_reports(telem, comms, freq, sim_speedup_factor):
     global logger
     while True:
+        # Sample the temperature of the module (simulated)
         data = telem.get_temp()
+
+        # Report to ground station
         comms.send(data)
         logger.info(f"Telemetry sent: {data:.4f}")
         time.sleep(freq / sim_speedup_factor)
@@ -129,24 +119,34 @@ def telemetry_reports(telem, comms, freq, sim_speedup_factor):
 def recieve_manual_directions(drivers, comms):
     global logger
     while True:
+        # Wait for manual directions from the ground station
         packet = comms.recv()
         az, duration = packet[0], packet[1]
-        logger.info(f"Manual direction command received. Azimuth set to {az} for duration {duration}.")
+
+        # Force set drivers for manual direction
         drivers.set_azimuth(az, force_duration=duration)
+        logger.info(f"Manual direction command received. Azimuth set to {az} for duration {duration}.")
 
 
 def recieve_manual_propulsion(drivers, comms):
+    global logger
     while True:
+        # Wait for manual propulsion from the ground station
         packet = comms.recv()
         speed, duration = packet[0], packet[1]
-        logger.info(f"Manual propulsion command received. Speed set to {speed} for duration {duration}.")
+
+        # Force set drivers for manual propulsion
         drivers.set_propulsion(speed, force_duration=duration)
+        logger.info(f"Manual propulsion command received. Speed set to {speed} for duration {duration}.")
 
 
 def recieve_new_maps(nav, comms):
     while True:
+        # Wait for new currents map from ground station
         latlons, currents = comms.recv()
         logger.info(f"New current map receieved.")
+
+        # Update currents map
         nav.set_currents_map(latlons, currents)
 
 
