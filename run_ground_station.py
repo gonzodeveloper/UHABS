@@ -17,7 +17,11 @@ gps = [0, 0]
 
 
 def main(config):
+	"""
 
+	:param config:
+	:return:
+	"""
 	# Read the initial currents from file
 	latlons, currents = read_netcdf(config['init_map'])
 
@@ -39,17 +43,28 @@ def main(config):
 	instr_prop_transmitter = Transmistter(ground_station, port_list['manual_prop'])
 	new_map_transmitter = Transmistter(ground_station, port_list['maps'])
 
-	# Receive telemetry and GPS
-	Thread(target=controls, args=(comms,)).start()
+	# Send new maps and manual instructions
+	Thread(target=controls, args=(instr_az_transmitter, instr_prop_transmitter, new_map_transmitter,)).start()
 
+	# Receive telemetry, path, and GPS
 	Thread(target=telem_list, args=(telem_listener,)).start()
 	Thread(target=path_list, args=(path_listener,)).start()
 	Thread(target=gps_list, args=(gps_listener,)).start()
 
-	# Send new maps and instructions
 
+<<<<<<< HEAD:run_ground_station.py
 
 def controls(comms):
+=======
+def controls(az_comms, prop_comms, map_comms):
+	"""
+
+	:param az_comms: holds azimuth inputs; float
+	:param prop_comms: holds propulsion inputs; float
+	:param map_comms: holds lat, longs, and current maps; tuple of numpy float32 arrays
+	:return:
+	"""
+>>>>>>> af10c8e360a0e0d856be871f64df38e638fb0a33:ground_station.py
 
 	# Initialize
 	quit = False
@@ -62,14 +77,14 @@ def controls(comms):
 		if choice == "AZ":
 			new_az = input("Please input new azimuth: ")
 			new_az = np.float32(new_az)
-			comms.send(new_az)
+			az_comms.send(new_az)
 			print("You just sent {}.".format('new_az'))
 
 		# Receive propulsion input and send
 		elif choice == "PROP":
 			new_prop = input("Please input new propulsion: ")
 			new_prop = np.float32(new_prop)
-			comms.send(new_prop)
+			prop_comms.send(new_prop)
 			print("You just sent {}.".format('new_prop'))
 
 		# Receive new map file input and send
@@ -77,7 +92,7 @@ def controls(comms):
 			new_map = input("Please input file location for new map: ")
 			latlons, currents = read_netcdf(new_map)
 			map_stack = np.stack((latlons, currents))
-			comms.send(map_stack)
+			map_comms.send(map_stack)
 			print("You just sent {}.".format('new_map'))
 
 		# Quit controls
