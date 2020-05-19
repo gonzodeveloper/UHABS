@@ -10,6 +10,10 @@ import sys
 import time
 import numpy as np
 
+# Initialize global variables
+temp = 0
+path = 0
+gps = [0, 0]
 
 def main(config):
 
@@ -26,13 +30,14 @@ def main(config):
 	boat = config['boat_addr']
 	port_list = config['ports']
 
-	path_transmitter = Listener(boat, port_list['nav_path'])
-	telem_transmitter = Listener(boat, port_list['telem'])
-	gps_transmitter = Listener(boat, port_list['gps'])
+	path_listener = Listener(boat, port_list['nav_path'])
+	telem_listener = Listener(boat, port_list['telem'])
+	gps_listener = Listener(boat, port_list['gps'])
 
-	instr_az_comms  = Transmistter(ground_station, port_list['manual_az'])
-	instr_prop_comms = Transmistter(ground_station, port_list['manual_prop'])
-	new_map_listener = Transmistter(ground_station, port_list['maps'])
+	instr_az_transmitter = Transmistter(ground_station, port_list['manual_az'])
+	instr_prop_transmitter = Transmistter(ground_station, port_list['manual_prop'])
+	new_map_transmitter = Transmistter(ground_station, port_list['maps'])
+
 
 def controls(comms):
 
@@ -61,15 +66,39 @@ def controls(comms):
 		elif choice == "MAP":
 			new_map = input("Please input file location for new map: ")
 			latlons, currents = read_netcdf(new_map)
-                        map_stack = np.stack((latlons, currents))
+			map_stack = np.stack((latlons, currents))
 			# comms.send(map_stack)
 			print("You just sent {}.".format('new_map'))
 
 		# Quit controls
 		elif choice == "quit":
-			quit == True
+			quit = True
 
-                else:
-                    print("Invalid Choice")
+		else:
+			print("Invalid Choice")
 
-                print()
+	print()
+
+
+def t_list(telem_listener):
+
+	# Constantly grab temperatures and assign to global variable
+	global temp
+	while True:
+		temp = telem_listener.recv()
+
+
+def path_list(path_listener):
+
+	# Grab path and assign to a global variable
+	global path
+	while True:
+		path = path_listener.recv()
+
+
+def gps_list(gps_listener):
+
+	# Grab GPS and assign to a global variable
+	global gps
+	while True:
+		gps = gps_listener()
