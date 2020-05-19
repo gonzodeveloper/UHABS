@@ -21,6 +21,7 @@ def main(config):
     drivers = ModuleDrivers()
 
     # Initialize communications
+    boat = config['boat_addr']
     ground_station = config['gs_addr']
     port_list = config['ports']
 
@@ -28,10 +29,9 @@ def main(config):
     telem_transmitter = Transmistter(ground_station, port_list['telem'])
     gps_transmitter = Transmistter(ground_station, port_list['gps'])
 
-    instr_az_comms  = Listener(ground_station, port_list['manual_az'])
-    instr_prop_comms = Listener(ground_station, port_list['manual_prop'])
-    new_map_listener = Listener(ground_station, port_list['maps'])
-
+    instr_az_comms  = Listener(boat, port_list['manual_az'])
+    instr_prop_comms = Listener(boat, port_list['manual_prop'])
+    new_map_listener = Listener(boat, port_list['maps'])
 
     # Start autonomous navigation
     Thread(target=auto_pilot, args=(config['init_pos'],

@@ -5,15 +5,16 @@ import pyproj
 import struct
 import scipy
 
+
 class ModuleNavigation:
 
-
-    def __init__(self, nav_timestep, latlons, currents):
-
+    def __init__(self, nav_timestep, latlons, currents, verbose=True):
 
         self.latlons = latlons
         self.currents = currents
         self.timestep = nav_timestep
+        self.verbose = verbose
+
         self.nav_graph = self._transform_map()
 
         self.kdtree = self._build_tree()
@@ -50,7 +51,10 @@ class ModuleNavigation:
 
         path_ids = np.array([self._decode_node_id(ids) for ids in shortest_path])
 
-        return next_az, path_ids
+        path_coords = np.array([self.latlons[y, x] for (y, x) in path_ids])
+
+        return next_az, path_coords
+
     def get_current(self, geo_pos):
 
         y, x = self._geo_idx(geo_pos)
@@ -79,11 +83,17 @@ class ModuleNavigation:
         # Dimensions to iterate through
         y_dim = self.currents.shape[0]
         x_dim = self.currents.shape[1]
-
+        
+        # For verbose print 
+        idx = 0
         # Iterate through positions in graph
         for y in range(y_dim):
             for x in range(x_dim):
 
+                # Verbose print
+                if self.verbose is True:
+                    idx += 1
+                    ModuleNavigation.print_progress_bar(idx, y_dim * x_dim)
 
                 # Get neighbors, with weights and azimuths, of (y, x)
                 ns = self._get_neighbors(y, x, dims=(y_dim, x_dim))
@@ -122,14 +132,14 @@ class ModuleNavigation:
         # Get the lat-lon coords of the VALID adjacent positions
         valid_neighbors = [(yd, xd) for (yd, xd) in neighbors if (0 <= yd < y_dim) and (0 <= xd < x_dim)]
 
-        coords_adj = [self.latlons[yd, xd] for (yd, xd) in valid_neighbors]
+        coords_adj = np.array([self.latlons[yd, xd] for (yd, xd) in valid_neighbors])
         lats_adj, lons_adj = coords_adj[::,0], coords_adj[::,1]
 
         # Get a Geod object with the WGS84 CRS
         geod = pyproj.Geod(ellps='WGS84')
 
         # Get the forward azimuths and distances to the adjacent coords (ignore back azimuths)
-        azimuth, _, dist_adj = geod.inv(lon_src, lat_src, lons_adj, lats_adj)
+        azimuth, _, dist_adj = geod.inv(np.repeat(lon_src, len(lons_adj)), np.repeat(lat_src, len(lats_adj)), lons_adj, lats_adj)
 
         # Get 0 - 360 representation of azimuths
         theta_adj = azimuth % 360
@@ -175,6 +185,22 @@ class ModuleNavigation:
         """
         return struct.unpack("II", raw)
 
-
+    @staticmethod
+    def print_progress_bar (iteration, total, length=100, fill='█'):
+        '''
+        Auxillary function. Gives us a progress bar which tracks the completion status of our task. Put in loop.
+        :param iteration: current iteration
+        :param total: total number of iterations
+        :param length: length of bar
+        :param fill: fill of bar
+        :return:
+        '''
+        prefix = "Transforming Map: "
+        filled_length = int(length * iteration // total)
+        bar = fill * filled_length + '-' * (length - filled_length)
+        print(f' {prefix} |{bar}| {iteration} of {total} nodes', end='\r')
+        # Print New Line on Complete
+        if iteration == total:
+            print()
 
 
