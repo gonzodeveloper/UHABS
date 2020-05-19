@@ -24,4 +24,6 @@ In order to run a shortest path algorithm on the currents map we have to transfo
 
 The result of this is a D2Q9 lattice, on which we can run our classical shortest path algorithm.
 
-Because we have been unable to run ocean testing. We simulated runs using the same technique as above. For each timestep the ocean craft takes an azimuth based on its shortest path (with a set rate of propulsion), its position at the next timestep is determined by summing that propulsion vector with the u-v component vectors of the currents it passes over. At the begining of the next timestep the shortest path is recalculated and another azimuth is taken.
+Because we have been unable to run ocean testing. We simulated runs using the same technique as above. For each timestep the ocean craft takes an azimuth based on its shortest path (with a set rate of propulsion), its position at the next timestep is determined by summing that propulsion vector with the u-v component vectors of the currents it passes over. At the begining of the next timestep the shortest path is recalculated and another azimuth is taken. 
+
+This is a similar technique to that used in the lattice boltzmann method—though it does not need to account for collisions—and likewise, its implementation can be highly-parallelized.
