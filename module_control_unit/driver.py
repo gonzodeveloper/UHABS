@@ -19,11 +19,15 @@ class ModuleDrivers:
             self.azimuth = theta
             time.sleep(force_duration)
 
+            return self.azimuth
+
     def set_propulsion(self, speed, force_duration=0):
         # Sleeps the module instructions for a period of time for the lock
         with self.prop_lock:
             self.propulsion = speed
             time.sleep(force_duration)
+
+            return self.propulsion
 
     # Grab propulsion
     def get_propulsion(self):

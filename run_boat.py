@@ -11,7 +11,10 @@ import time
 import warnings
 import logging
 
+logger = None
+
 def main(config):
+    global logger
     logger = logging.basicConfig(
         filename='boat.log',
         format='%(asctime)s %(levelname)-8s %(message)s',
@@ -59,6 +62,9 @@ def main(config):
     Thread(target=recieve_manual_propulsion, args=(drivers, instr_prop_comms)).start()
     Thread(target=recieve_new_maps, args=(nav, new_map_comms)).start()
 
+    # Logging
+    logging.info("")
+
 
 def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, timestep, sim_speedup_factor=1):
     """
@@ -74,43 +80,57 @@ def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, times
     :param sim_speedup_factor: factor by which simulation is sped up; int
     :return:
     """
+    global logger
     pos = init_pos
 
     while pos != dest:
 
         # Calculate the shortest path given our position and destination
         az, path = nav.get_next_azimuth(pos, dest)
+        logger.info(f"Path recalculated.")
 
         print(f"Pos: {pos}   AZ: {az}")
         # Set the bearing of the craft
-        drivers.set_azimuth(az)
+        bearing = drivers.set_azimuth(az)
+        logger.info(f"Azimuth set. New azimuth: {bearing}")
 
         # Get the ocean current at our position
         current = nav.get_current(pos)
+        logger.info(f"Ocean current at position acquired.")
+
         # Get module's propulsion
         prop = drivers.get_propulsion()
+        logger.info(f"Propulsion set. New propulsion: {prop}")
 
         # Next position is determined by our position, speed, dir, ocean current, and time elapsed
         pos = telem.get_position(pos, current, az, prop, timestep)
+        logger.info(f"GPS updated. GPS transmitted. New position: {pos}")
 
         # Transmit data
         gps_trans.send(pos)
         path_trans.send(path)
+        logger.info("Path and GPS sent.")
 
         time.sleep(timestep / sim_speedup_factor)
 
 
+
+
 def telemetry_reports(telem, comms, freq, sim_speedup_factor):
+    global logger
     while True:
         data = telem.get_temp()
         comms.send(data)
+        logger.info(f"Telemetry sent. Temperature is {data}")
         time.sleep(freq / sim_speedup_factor)
 
 
 def recieve_manual_directions(drivers, comms):
+    global logger
     while True:
         packet = comms.recv()
         az, duration = packet[0], packet[1]
+        logger.info(f"Manual direction command received. Azimuth set to {az} for duration {duration}.")
         drivers.set_azimuth(az, force_duration=duration)
 
 
@@ -118,12 +138,14 @@ def recieve_manual_propulsion(drivers, comms):
     while True:
         packet = comms.recv()
         speed, duration = packet[0], packet[1]
+        logger.info(f"Manual propulsion command received. Speed set to {speed} for duration {duration}.")
         drivers.set_propulsion(speed, force_duration=duration)
 
 
 def recieve_new_maps(nav, comms):
     while True:
         latlons, currents = comms.recv()
+        logger.info(f"New current map receieved.")
         nav.set_currents_map(latlons, currents)
 
 
