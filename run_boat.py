@@ -54,6 +54,19 @@ def main(config):
 
 
 def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, timestep, sim_speedup_factor=1):
+    """
+
+    :param init_pos: initial position of boat; tuple
+    :param dest: destination position of boat; tuple
+    :param nav:
+    :param telem: placeholder for telemetry (temperature); float
+    :param drivers: contains azimuth and speed information; tuple
+    :param path_trans: sends path; array of tuples
+    :param gps_trans: sends gps; tuple
+    :param timestep: time between iterations; int
+    :param sim_speedup_factor: factor by which simulation is sped up; int
+    :return:
+    """
     pos = init_pos
 
     while pos != dest:
