@@ -7,18 +7,18 @@ init_map: ./data/S1A_ESA_159.56W_20.87N_VV_C5_GFS05CDF_wind_level2.nc
 nav_timestep: 100
 
 # Simulation speed up factor, for realtime simulation use 1
-sim_speedup_factor: 10
+sim_speedup_factor: 100
 
 
 # Realtime frequency of telemetry sampling
 telem_freq: 50
 
 # Initial propulsion (m/s), and location (lat, lon)
-init_propulstion: 5
-init_pos: [20.2, -158.7]
+init_propulstion: 10
+init_pos:  [21.05, -160.0]
 
 # Desired destination
-destination: [21.05, -160.0]
+destination: [20.2, -158.7]
 
 # Comms
 boat_addr: thinkmachine

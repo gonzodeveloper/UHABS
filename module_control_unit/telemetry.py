@@ -26,8 +26,8 @@ class ModuleTelemetry:
         lat_start, lon_start = geo_pos
 
         # Find boat velocity vector
-        boat_u = propulsion * np.cos(np.radians(azimuth))
-        boat_v = propulsion * np.sin(np.radians(azimuth))
+        boat_u = propulsion * np.sin(np.radians(azimuth))
+        boat_v = propulsion * np.cos(np.radians(azimuth))
 
         # Find total boat velocity vector, including current vector
         current_u, current_v = current

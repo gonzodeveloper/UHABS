@@ -9,7 +9,7 @@ def plot_navigation(position, destination, path, latlons, currents, temp, plot_i
 
     # Separate latlons from grid (also UV
     lats, lons = latlons[::,::, 0], latlons[::, ::, 1]
-    u, v = -currents[::,::,0], -currents[::,::,1]
+    u, v = currents[::,::,0], currents[::,::,1]
 
     # Determine absolute speed
     speed = np.sqrt(u**2 + v**2)

@@ -148,8 +148,8 @@ class ModuleNavigation:
         velocity = dist_adj / self.timestep
 
         # Break azimuth and weights into component vectors
-        u_adj = velocity * np.cos(np.radians(theta_adj))
-        v_adj = velocity * np.sin(np.radians(theta_adj))
+        u_adj = velocity * np.sin(np.radians(theta_adj))
+        v_adj = velocity * np.cos(np.radians(theta_adj))
 
         # Current at source
         current_u, current_v = self.currents[ys, xs]

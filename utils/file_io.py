@@ -19,8 +19,8 @@ def read_netcdf(filename):
         input_dir = nc.variables['input_dir'][:]
 
         # Convert speed + direction to u and v component for wind vectors
-        u = sar_wind * np.cos(input_dir)
-        v = sar_wind * np.sin(input_dir)
+        u = sar_wind * np.sin(input_dir)
+        v = sar_wind * np.cos(input_dir)
 
         return np.dstack((lats, lons)), np.dstack((u, v))
 
