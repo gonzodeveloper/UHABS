@@ -51,19 +51,25 @@ def controls(comms):
 			print("You just sent {}.".format('new_az'))
 
 		# Receive propulsion input and send
-		if choice == "PROP":
+		elif choice == "PROP":
 			new_prop = input("Please input new propulsion: ")
 			new_prop = np.float32(new_prop)
 			# comms.send(new_prop)
 			print("You just sent {}.".format('new_prop'))
 
 		# Receive new map file input and send
-		if choice == "MAP":
+		elif choice == "MAP":
 			new_map = input("Please input file location for new map: ")
-			new_map_array = read_netcdf(new_map)
-			# comms.send(new_map_array)
+			latlons, currents = read_netcdf(new_map)
+                        map_stack = np.stack((latlons, currents))
+			# comms.send(map_stack)
 			print("You just sent {}.".format('new_map'))
 
 		# Quit controls
-		if choice == "quit":
+		elif choice == "quit":
 			quit == True
+
+                else:
+                    print("Invalid Choice")
+
+                print()
