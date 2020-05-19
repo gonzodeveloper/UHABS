@@ -4,7 +4,7 @@
 
 This navigation sub-system was designed for autonomous guidence of the UHABS ocean recovery module. While we have not got to ocean testing, we have created a simulation for proof-of-concept. 
 
-![]({{site.baseurl}}/https://github.com/gonzodeveloper/UHABS/blob/master/visuals/animation.gif)
+![sim animation](https://github.com/gonzodeveloper/UHABS/blob/master/visuals/animation.gif?raw=true)
 
 In future iterations of this project, this code can be adapted for live use with the substitution of driver and telemetry code.
 
