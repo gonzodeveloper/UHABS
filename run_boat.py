@@ -11,16 +11,18 @@ import time
 import warnings
 import logging
 
-logger = None
+logger = logging.getLogger('boat_logger')
+
 
 def main(config):
+
     global logger
-    logger = logging.basicConfig(
-        filename='boat.log',
-        format='%(asctime)s %(levelname)-8s %(message)s',
-        level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S')
     logger.setLevel(logging.INFO)
+    handler = logging.FileHandler('./logs/boat.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    logger.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
     # Read the initial currents from file
     latlons, currents = read_netcdf(config['init_map'])
@@ -29,6 +31,8 @@ def main(config):
     nav = ModuleNavigation(config['nav_timestep'], latlons, currents)
     telem = ModuleTelemetry()
     drivers = ModuleDrivers()
+
+    drivers.set_propulsion(config['init_propulstion'])
 
     # Initialize communications
     ground_station = config['gs_addr']
@@ -89,10 +93,9 @@ def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, times
         az, path = nav.get_next_azimuth(pos, dest)
         logger.info(f"Path recalculated.")
 
-        print(f"Pos: {pos}   AZ: {az}")
         # Set the bearing of the craft
         bearing = drivers.set_azimuth(az)
-        logger.info(f"Azimuth set. New azimuth: {bearing}")
+        logger.info(f"Azimuth set: {bearing:.2f}")
 
         # Get the ocean current at our position
         current = nav.get_current(pos)
@@ -100,11 +103,11 @@ def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, times
 
         # Get module's propulsion
         prop = drivers.get_propulsion()
-        logger.info(f"Propulsion set. New propulsion: {prop}")
+        logger.info(f"Propulsion: {prop}")
 
         # Next position is determined by our position, speed, dir, ocean current, and time elapsed
         pos = telem.get_position(pos, current, az, prop, timestep)
-        logger.info(f"GPS updated. GPS transmitted. New position: {pos}")
+        logger.info(f"GPS updated. GPS transmitted: {pos[0]:.4f} N {pos[1]:.4f} E")
 
         # Transmit data
         gps_trans.send(pos)
@@ -114,14 +117,12 @@ def auto_pilot(init_pos, dest, nav, telem, drivers, path_trans, gps_trans, times
         time.sleep(timestep / sim_speedup_factor)
 
 
-
-
 def telemetry_reports(telem, comms, freq, sim_speedup_factor):
     global logger
     while True:
         data = telem.get_temp()
         comms.send(data)
-        logger.info(f"Telemetry sent. Temperature is {data}")
+        logger.info(f"Telemetry sent: {data:.4f}")
         time.sleep(freq / sim_speedup_factor)
 
 

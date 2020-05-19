@@ -20,7 +20,8 @@ dest = None
 latlons = None
 currents = None
 
-logger = None
+logger = logging.getLogger('gs_logger')
+
 
 def main(config):
     """
@@ -29,12 +30,12 @@ def main(config):
     :return:
     """
     global logger
-    logger = logging.basicConfig(
-        filename='boat.log',
-        format='%(asctime)s %(levelname)-8s %(message)s',
-        level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S')
     logger.setLevel(logging.INFO)
+    handler = logging.FileHandler('./logs/gs.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    logger.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
     global dest, latlons, currents
 
@@ -141,7 +142,7 @@ def telem_list(ground_station, port_list):
     # Constantly grab temperatures and assign to global variable
     while True:
         temp = telem_listener.recv()
-        logger.info(f"New telemetry received. New temperature is {temp}.")
+        logger.info(f"New telemetry received. Temperature: {temp:.4f}.")
 
 
 def path_list(ground_station, port_list):
@@ -154,7 +155,6 @@ def path_list(ground_station, port_list):
 
     # Grab path and assign to a global variable
     while True:
-        print("NEW PATH")
         path = path_listener.recv()
         logger.info(f"New path received. Path has length {len(path)}.")
 
@@ -169,7 +169,7 @@ def gps_list(ground_station, port_list):
     # Grab GPS and assign to a global variable
     while True:
         pos = gps_listener.recv()
-        logger.info(f"New GPS received. New position is {pos}.")
+        logger.info(f"New GPS received. {pos[0]:.4f} N {pos[1]:.4f} E.")
 
 
 def visualize():
@@ -177,7 +177,7 @@ def visualize():
 
     idx = 0
     while True:
-        if path is None:
+        if path is None or pos is None:
             continue
         plot_navigation(pos, dest, path, latlons, currents, temp, plot_idx=idx)
         idx += 1

@@ -15,10 +15,11 @@ telem_freq: 50
 
 # Initial propulsion (m/s), and location (lat, lon)
 init_propulstion: 10
-init_pos:  [21.05, -160.0]
+init_pos: [21.05, -160.0]
 
 # Desired destination
 destination: [20.2, -158.7]
+
 
 # Comms
 boat_addr: thinkmachine

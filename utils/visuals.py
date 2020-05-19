@@ -3,7 +3,7 @@ import numpy as np
 import datetime
 
 
-def plot_navigation(position, destination, path, latlons, currents, temp, plot_idx, save_dir="plots", skip_factor=10):
+def plot_navigation(position, destination, path, latlons, currents, temp, plot_idx, save_dir="./visuals/plots", skip_factor=10):
     # Determine the skip factor for plotting ( plotting all points will be a mess )
     skip = (slice(None, None, skip_factor), slice(None, None, skip_factor))
 
