@@ -186,7 +186,7 @@ class ModuleNavigation:
         return struct.unpack("II", raw)
 
     @staticmethod
-    def print_progress_bar (iteration, total, length=100, fill='█'):
+    def print_progress_bar (iteration, total, length=50, fill='█'):
         '''
         Auxillary function. Gives us a progress bar which tracks the completion status of our task. Put in loop.
         :param iteration: current iteration

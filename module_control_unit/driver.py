@@ -13,13 +13,11 @@ class ModuleDrivers:
         self.az_lock = RLock()
         self.prop_lock = RLock()
 
-
     def set_azimuth(self, theta, force_duration=0):
         # Sleeps the module instructions for a period of time for the lock
         with self.az_lock:
             self.azimuth = theta
             time.sleep(force_duration)
-
 
     def set_propulsion(self, speed, force_duration=0):
         # Sleeps the module instructions for a period of time for the lock

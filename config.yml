@@ -15,14 +15,14 @@ telem_freq: 50
 
 # Initial propulsion (m/s), and location (lat, lon)
 init_propulstion: 5
-init_pos: [20.2, -158.1]
+init_pos: [20.2, -158.7]
 
 # Desired destination
 destination: [21.05, -160.0]
 
 # Comms
-boat_addr: localhost
-gs_addr: localhost
+boat_addr: thinkmachine
+gs_addr: thinkmachine
 
 
 ports:

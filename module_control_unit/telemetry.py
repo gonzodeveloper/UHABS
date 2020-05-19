@@ -4,7 +4,6 @@ import pyproj
 
 class ModuleTelemetry:
 
-
     @staticmethod
     def get_temp(mu=65, sigma=5):
         # Generate a random temperature

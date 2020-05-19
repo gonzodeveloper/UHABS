@@ -1,47 +1,32 @@
 from threading import Thread
+from threading import Thread
 import numpy as np
 import socket
 import struct
 import io
 
 
-class Transmistter:
-    def __init__(self, host, port):
+class Comms:
+    def __init__(self, host, port, listener=False):
         self.host = host
         self.port = port
-        self.conn = self.connect()
 
-
+        if listener:
+            self.conn = None
+            Thread(target=self.listen).start()
+        else:
+            self.conn = self.connect()
 
     def connect(self):
         # Make socket
         sock = socket.socket()
 
         # Connect
-        conn = sock.connect((self.host, self.port))
+        sock.connect((self.host, self.port))
 
         # Give timeout
-        conn.settimeout(300)
-
-        return conn
-
-    def send(self, data):
-        with io.BytesIO() as buffer:
-            np.savez_compressed(buffer, data=data)
-
-            msg_len = struct.pack('>I', buffer.tell())
-
-            self.conn.sendall(msg_len)
-            self.conn.sendall(buffer)
-
-
-
-class Listener:
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
-
-        self.conn = self.listen()
+        #sock.settimeout(300)
+        return sock
 
     def listen(self):
         # Make socket
@@ -51,21 +36,15 @@ class Listener:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # Bind to port
-        sock.bind((self.host, self.port))
+        sock.bind((socket.gethostname(), self.port))
+        while True:
+            # Listen for new connections
+            sock.listen()
 
-        # Listen for new connections
-        sock.listen()
-
-        conn, addr = sock.accept()
-        conn.settimeout(300)
-
-        # Spin off as new thread
-        return conn
-
-
+            self.conn, addr = sock.accept()
+            #conn.settimeout(300)
 
     def recv(self):
-
         # Length of our data is received as uint32
         raw_data_len = self.conn.recv(4)
         data_len = struct.unpack('>I', raw_data_len)[0]
@@ -83,3 +62,12 @@ class Listener:
             data = np.load(buffer)['data']
 
         return data
+
+    def send(self, data):
+        with io.BytesIO() as buffer:
+            np.savez_compressed(buffer, data=data)
+
+            msg_len = struct.pack('>I', buffer.tell())
+
+            self.conn.sendall(msg_len)
+            self.conn.sendall(buffer.getvalue())

@@ -1,130 +1,173 @@
-from .common_utils.file_io import read_netcdf
-from .common_utils.comms import Transmistter, Listener
-from .module_control_unit.nav import ModuleNavigation
-from .module_control_unit.driver import ModuleDrivers
-from .module_control_unit.telemetry import ModuleTelemetry
+from utils.file_io import read_netcdf
+from utils.comms import Comms
+from utils.visuals import plot_navigation
 
 from threading import Thread
 import yaml
 import sys
 import time
 import numpy as np
+import warnings
+import logging
+
 
 # Initialize global variables
-temp = 0
-path = 0
-gps = [0, 0]
+temp = None
+path = None
+pos = None
+dest = None
+
+latlons = None
+currents = None
 
 
 def main(config):
-	"""
+    """
 
-	:param config:
-	:return:
-	"""
-	# Read the initial currents from file
-	latlons, currents = read_netcdf(config['init_map'])
+    :param config:
+    :return:
+    """
 
-	# Initialize command modules
-	nav = ModuleNavigation(config['nav_timestep'], latlons, currents)
-	telem = ModuleTelemetry()
-	drivers = ModuleDrivers()
+    global dest, latlons, currents
 
-	# Initialize communications
-	ground_station = config['gs_addr']
-	boat = config['boat_addr']
-	port_list = config['ports']
+    # Get initial destination
+    dest = config['destination']
 
-	path_listener = Listener(boat, port_list['nav_path'])
-	telem_listener = Listener(boat, port_list['telem'])
-	gps_listener = Listener(boat, port_list['gps'])
+    # Read the initial currents from file
+    latlons, currents = read_netcdf(config['init_map'])
 
-	instr_az_transmitter = Transmistter(ground_station, port_list['manual_az'])
-	instr_prop_transmitter = Transmistter(ground_station, port_list['manual_prop'])
-	new_map_transmitter = Transmistter(ground_station, port_list['maps'])
+    # Initialize communications
+    ground_station = config['gs_addr']
+    port_list = config['ports']
 
-	# Send new maps and manual instructions
-	Thread(target=controls, args=(instr_az_transmitter, instr_prop_transmitter, new_map_transmitter,)).start()
+    # Send new maps and manual instructions
+    Thread(target=controls, args=(ground_station, port_list,)).start()
 
-	# Receive telemetry, path, and GPS
-	Thread(target=telem_list, args=(telem_listener,)).start()
-	Thread(target=path_list, args=(path_listener,)).start()
-	Thread(target=gps_list, args=(gps_listener,)).start()
+    # Receive telemetry, path, and GPS
+    Thread(target=telem_list, args=(ground_station, port_list,)).start()
+    Thread(target=path_list, args=(ground_station, port_list,)).start()
+    Thread(target=gps_list, args=(ground_station, port_list,)).start()
+
+    # Plotting
+    Thread(target=visualize).start()
 
 
-<<<<<<< HEAD:run_ground_station.py
+def controls(ground_station, port_list):
+    """
 
-def controls(comms):
-=======
-def controls(az_comms, prop_comms, map_comms):
-	"""
+    :param az_comms: holds azimuth inputs; float
+    :param prop_comms: holds propulsion inputs; float
+    :param map_comms: holds lat, longs, and current maps; tuple of numpy float32 arrays
+    :return:
+    """
+    global latlons, currents
 
-	:param az_comms: holds azimuth inputs; float
-	:param prop_comms: holds propulsion inputs; float
-	:param map_comms: holds lat, longs, and current maps; tuple of numpy float32 arrays
-	:return:
-	"""
->>>>>>> af10c8e360a0e0d856be871f64df38e638fb0a33:ground_station.py
+    print("Waiting for connection...")
+    az_comms = Comms(ground_station, port_list['manual_az'], listener=True)
+    prop_comms = Comms(ground_station, port_list['manual_prop'], listener=True)
+    map_comms = Comms(ground_station, port_list['maps'], listener=True)
 
-	# Initialize
-	quit = False
-	while not quit:
+    while az_comms.conn is None and prop_comms.conn is None and map_comms.conn is None:
+        pass
 
-		# Prompt for additional instructions
-		choice = input("Please input instruction type (AZ, PROP, MAP): ")
+    print("Connected! ")
+    # Initialize
+    quit = False
+    while not quit:
 
-		# Receive azimuth input and send
-		if choice == "AZ":
-			new_az = input("Please input new azimuth: ")
-			new_az = np.float32(new_az)
-			az_comms.send(new_az)
-			print("You just sent {}.".format('new_az'))
+        # Prompt for additional instructions
+        choice = input("Please input instruction type (AZ, PROP, MAP, QUIT): ")
 
-		# Receive propulsion input and send
-		elif choice == "PROP":
-			new_prop = input("Please input new propulsion: ")
-			new_prop = np.float32(new_prop)
-			prop_comms.send(new_prop)
-			print("You just sent {}.".format('new_prop'))
+        # Receive azimuth input and send
+        if choice == "AZ":
+            new_az = input("New azimuth: (degrees)")
+            duration = input("Duration (seconds): ")
 
-		# Receive new map file input and send
-		elif choice == "MAP":
-			new_map = input("Please input file location for new map: ")
-			latlons, currents = read_netcdf(new_map)
-			map_stack = np.stack((latlons, currents))
-			map_comms.send(map_stack)
-			print("You just sent {}.".format('new_map'))
+            packet = np.stack((new_az, duration))
+            az_comms.send(packet)
 
-		# Quit controls
-		elif choice == "quit":
-			quit = True
+        # Receive propulsion input and send
+        elif choice == "PROP":
+            new_prop = input("New propulsion setting (m/s): ")
+            duration = input("Duration (seconds): ")
 
-		else:
-			print("Invalid Choice")
+            packet = np.stack((new_prop, duration))
+            prop_comms.send(packet)
 
-	print()
+        # Receive new map file input and send
+        elif choice == "MAP":
+            new_map = input("File path to new currents map (.netcdf file): ")
+            latlons, currents = read_netcdf(new_map)
+            map_stack = np.stack((latlons, currents))
+            map_comms.send(map_stack)
 
+        # Quit controls
+        elif choice == "QUIT":
+            quit = True
 
-def telem_list(telem_listener):
+        else:
+            print("Invalid Choice")
 
-	# Constantly grab temperatures and assign to global variable
-	global temp
-	while True:
-		temp = telem_listener.recv()
+        print("\n")
 
 
-def path_list(path_listener):
+def telem_list(ground_station, port_list):
+    global temp
 
-	# Grab path and assign to a global variable
-	global path
-	while True:
-		path = path_listener.recv()
+    telem_listener = Comms(ground_station, port_list['telem'], listener=True)
+
+    while telem_listener.conn is None:
+        pass
+
+    # Constantly grab temperatures and assign to global variable
+    while True:
+        temp = telem_listener.recv()
 
 
-def gps_list(gps_listener):
+def path_list(ground_station, port_list):
+    global path
 
-	# Grab GPS and assign to a global variable
-	global gps
-	while True:
-		gps = gps_listener.recv()
+    path_listener = Comms(ground_station, port_list['nav_path'], listener=True)
+
+    while path_listener.conn is None:
+        pass
+
+    # Grab path and assign to a global variable
+    while True:
+        print("NEW PATH")
+        path = path_listener.recv()
+
+
+def gps_list(ground_station, port_list):
+    global pos
+
+    gps_listener = Comms(ground_station, port_list['gps'], listener=True)
+    while gps_listener.conn is None:
+        pass
+
+    # Grab GPS and assign to a global variable
+    while True:
+        pos = gps_listener.recv()
+
+
+def visualize():
+    global pos, path, temp, latlons, currents
+
+    idx = 0
+    while True:
+        if path is None:
+            continue
+        plot_navigation(pos, dest, path, latlons, currents, temp, plot_idx=idx)
+        idx += 1
+        time.sleep(10)
+
+
+if __name__ == '__main__':
+    warnings.filterwarnings("ignore")
+
+    # Load configuration YAML
+    with open(sys.argv[1]) as f:
+        config = yaml.load(f)
+
+    main(config)
 
