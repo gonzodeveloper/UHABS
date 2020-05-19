@@ -9,7 +9,7 @@ def read_netcdf(filename):
 
         sar_wind = nc.variables['sar_wind'][:]
         input_dir = nc.variables['input_dir'][:]
-        
+
         u = sar_wind * np.cos(input_dir)
         v = sar_wind * np.sin(input_dir)
 

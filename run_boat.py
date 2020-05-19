@@ -35,7 +35,7 @@ def main(config):
 
     # Start autonomous navigation
     Thread(target=auto_pilot, args=(config['init_pos'],
-                                    config['dest'],
+                                    config['destination'],
                                     nav,
                                     telem,
                                     drivers,

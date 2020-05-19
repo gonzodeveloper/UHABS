@@ -198,7 +198,7 @@ class ModuleNavigation:
         prefix = "Transforming Map: "
         filled_length = int(length * iteration // total)
         bar = fill * filled_length + '-' * (length - filled_length)
-        print(f' {prefix} |{bar}| {iteration} of {total} nodes', end='\r')
+        print(f'\r {prefix} |{bar}| {iteration} of {total} nodes', end='\r')
         # Print New Line on Complete
         if iteration == total:
             print()
