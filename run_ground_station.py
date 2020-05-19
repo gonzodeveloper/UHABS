@@ -20,6 +20,7 @@ dest = None
 latlons = None
 currents = None
 
+logger = None
 
 def main(config):
     """
@@ -27,6 +28,13 @@ def main(config):
     :param config:
     :return:
     """
+    global logger
+    logger = logging.basicConfig(
+        filename='boat.log',
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S')
+    logger.setLevel(logging.INFO)
 
     global dest, latlons, currents
 
@@ -60,12 +68,15 @@ def controls(ground_station, port_list):
     :param map_comms: holds lat, longs, and current maps; tuple of numpy float32 arrays
     :return:
     """
-    global latlons, currents
+    global latlons, currents, logger
 
     print("Waiting for connection...")
     az_comms = Comms(ground_station, port_list['manual_az'], listener=True)
+    logger.info("Azimuth transmitter connected.")
     prop_comms = Comms(ground_station, port_list['manual_prop'], listener=True)
+    logger.info("Propulsion transmitter connected.")
     map_comms = Comms(ground_station, port_list['maps'], listener=True)
+    logger.info("Current map transmitter connected.")
 
     while az_comms.conn is None and prop_comms.conn is None and map_comms.conn is None:
         pass
@@ -81,25 +92,33 @@ def controls(ground_station, port_list):
         # Receive azimuth input and send
         if choice == "AZ":
             new_az = input("New azimuth: (degrees)")
+            logger.info(f"Manual azimuth inputted. Azimuth: {new_az}.")
             duration = input("Duration (seconds): ")
+            logger.info(f"Manual azimuth inputted for Duration: {duration}.")
 
             packet = np.stack((new_az, duration))
             az_comms.send(packet)
+            logger.info(f"Manual azimuth input sent. Azimuth: {new_az} for Duration: {duration}.")
 
         # Receive propulsion input and send
         elif choice == "PROP":
             new_prop = input("New propulsion setting (m/s): ")
+            logger.info(f"Manual propulsion inputted. Propulsion: {new_prop}.")
             duration = input("Duration (seconds): ")
+            logger.info(f"Manual propulsion inputted for Duration: {duration}.")
 
             packet = np.stack((new_prop, duration))
             prop_comms.send(packet)
+            logger.infoa(f"Manual propulsion input sent. Propulsion: {new_prop} for Duration {duration}.")
 
         # Receive new map file input and send
         elif choice == "MAP":
             new_map = input("File path to new currents map (.netcdf file): ")
             latlons, currents = read_netcdf(new_map)
             map_stack = np.stack((latlons, currents))
+            logger.info("Current map updated.")
             map_comms.send(map_stack)
+            logger.info("Updated current map sent")
 
         # Quit controls
         elif choice == "QUIT":
@@ -112,7 +131,7 @@ def controls(ground_station, port_list):
 
 
 def telem_list(ground_station, port_list):
-    global temp
+    global temp, logger
 
     telem_listener = Comms(ground_station, port_list['telem'], listener=True)
 
@@ -122,10 +141,11 @@ def telem_list(ground_station, port_list):
     # Constantly grab temperatures and assign to global variable
     while True:
         temp = telem_listener.recv()
+        logger.info(f"New telemetry received. New temperature is {temp}.")
 
 
 def path_list(ground_station, port_list):
-    global path
+    global path, logger
 
     path_listener = Comms(ground_station, port_list['nav_path'], listener=True)
 
@@ -136,10 +156,11 @@ def path_list(ground_station, port_list):
     while True:
         print("NEW PATH")
         path = path_listener.recv()
+        logger.info(f"New path received. Path has length {len(path)}.")
 
 
 def gps_list(ground_station, port_list):
-    global pos
+    global pos, logger
 
     gps_listener = Comms(ground_station, port_list['gps'], listener=True)
     while gps_listener.conn is None:
@@ -148,6 +169,7 @@ def gps_list(ground_station, port_list):
     # Grab GPS and assign to a global variable
     while True:
         pos = gps_listener.recv()
+        logger.info(f"New GPS received. New position is {pos}.")
 
 
 def visualize():
